@@ -1,4 +1,4 @@
 Snippets
 ========
 
-Short code snipets and small tools.
+Code snipets and small tools.
