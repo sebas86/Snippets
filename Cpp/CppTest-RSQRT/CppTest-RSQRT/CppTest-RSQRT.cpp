@@ -155,6 +155,16 @@ float InvSqrtImprovedFast2(float arg)
     return _mm_cvtss_f32(guess);
 }
 
+float InvSqrtImprovedFast3(float arg)
+{
+    const __m128 vec = _mm_load_ss(&arg);
+    const __m128 vec2 = _mm_mul_ss(_mm_set_ss(-0.5f), vec);
+    __m128 guess = _mm_rsqrt_ss(vec);
+    guess = _mm_mul_ss(guess, _mm_add_ss(_mm_set_ss(1.5f), _mm_mul_ss(vec2, _mm_mul_ss(guess, guess))));
+    guess = _mm_mul_ss(guess, _mm_add_ss(_mm_set_ss(1.5f), _mm_mul_ss(vec2, _mm_mul_ss(guess, guess))));
+    return _mm_cvtss_f32(guess);
+}
+
 constexpr int32_t least_significant_mantisa_mask = 0b11111111111111111110000000000000;
 
 float InvSqrtFastMasked(float arg)
@@ -187,11 +197,130 @@ float InvSqrtImprovedFastMasked2(float arg)
     return _mm_cvtss_f32(guess);
 }
 
+float InvSqrtSoftFastApprox(float arg)
+{
+    const int32_t guessInt = 0x5f3759df - ((*reinterpret_cast<uint32_t*>(&arg)) >> 1);
+    return *reinterpret_cast<const float*>(&guessInt);
+}
+
+float InvSqrtSoftFastApprox2(float arg)
+{
+    const int32_t guessInt = 0x5F1FFFF9 - ((*reinterpret_cast<uint32_t*>(&arg)) >> 1);
+    return *reinterpret_cast<const float*>(&guessInt);
+}
+
+float InvSqrtSoftFastApproxSSE(float arg)
+{
+    const __m128 number = _mm_load_ss(&arg);
+    __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5f3759df), _mm_srai_epi32(_mm_castps_si128(number), 1)));
+    return _mm_cvtss_f32(guess);
+}
+
+float InvSqrtSoftFastApproxSSE2(float arg)
+{
+    const __m128 number = _mm_load_ss(&arg);
+    __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5F1FFFF9), _mm_srai_epi32(_mm_castps_si128(number), 1)));
+    return _mm_cvtss_f32(guess);
+}
+
+float InvSqrtSoftFastApproxImproved(float arg)
+{
+    uint32_t i;
+    float x2, y;
+    const float threehalfs = 1.5F;
+
+    x2 = arg * 0.5F;
+    y = arg;
+    //memcpy(&i, &y, sizeof(y));
+    i = *(uint32_t*)&y;
+    i = 0x5f3759df - (i >> 1);
+    //memcpy(&y, &i, sizeof(y));
+    y = *(float*)&i;
+    y = y * (threehalfs - (x2 * y * y));   // 1st iteration
+//	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+    return y;
+}
+
+float InvSqrtSoftFastApproxImproved2(float arg)
+{
+    uint32_t i;
+    float x2, y;
+
+    y = arg;
+    i = *(uint32_t*)&y;
+    i = 0x5F1FFFF9 - (i >> 1);
+    y = *(float*)&i;
+    y =  y * (0.703952253f * (2.38924456f - (arg * y * y)));
+    return y;
+}
+
+float InvSqrtSoftFastApproxImproved3(float arg)
+{
+    uint32_t i;
+    float x2, y;
+    const float threehalfs = 1.5F;
+
+    x2 = arg * 0.5F;
+    y = arg;
+    memcpy(&i, &y, sizeof(y));
+    i = 0x5f3759df - (i >> 1);
+    memcpy(&y, &i, sizeof(y));
+    y = y * (threehalfs - (x2 * y * y));
+    return y;
+}
+
+float InvSqrtSoftFastApproxImproved4(float arg)
+{
+    uint32_t i;
+    float x2, y;
+
+    y = arg;
+    memcpy(&i, &y, sizeof(y));
+    i = 0x5F1FFFF9 - (i >> 1);
+    memcpy(&y, &i, sizeof(y));
+    y = y * (0.703952253f * (2.38924456f - (arg * y * y)));
+    return y;
+}
+
+float InvSqrtSoftFastApproxImprovedSSE1(float arg)
+{
+    const int32_t guessInt = 0x5f3759df - ((*reinterpret_cast<uint32_t*>(&arg)) >> 1);
+    __m128 guess = _mm_castsi128_ps(_mm_set1_epi32(guessInt));
+    const __m128 arg2 = _mm_mul_ss(_mm_set_ss(-0.5f), _mm_load_ss(&arg));
+    guess = _mm_mul_ss(guess, _mm_add_ss(_mm_set_ss(1.5f), _mm_mul_ss(arg2, _mm_mul_ss(guess, guess))));
+    return _mm_cvtss_f32(guess);
+}
+
+float InvSqrtSoftFastApproxImprovedSSE2(float arg)
+{
+    const int32_t guessInt = 0x5F1FFFF9 - ((*reinterpret_cast<uint32_t*>(&arg)) >> 1);
+    __m128 guess = _mm_castsi128_ps(_mm_set1_epi32(guessInt));
+    guess = _mm_mul_ss(_mm_set_ss(0.703952253f), _mm_mul_ss(guess, _mm_sub_ss(_mm_set_ss(2.38924456f), _mm_mul_ss(_mm_load_ss(&arg), _mm_mul_ss(guess, guess)))));
+    return _mm_cvtss_f32(guess);
+}
+
+float InvSqrtSoftFastApproxImprovedSSE3(float arg)
+{
+    const __m128 number = _mm_load_ss(&arg);
+    __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5f3759df), _mm_srai_epi32(_mm_castps_si128(number), 1)));
+    const __m128 arg2 = _mm_mul_ss(_mm_set_ss(-0.5f), _mm_load_ss(&arg));
+    guess = _mm_mul_ss(guess, _mm_add_ss(_mm_set_ss(1.5f), _mm_mul_ss(arg2, _mm_mul_ss(guess, guess))));
+    return _mm_cvtss_f32(guess);
+}
+
+float InvSqrtSoftFastApproxImprovedSSE4(float arg)
+{
+    const __m128 number = _mm_load_ss(&arg);
+    __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5F1FFFF9), _mm_srai_epi32(_mm_castps_si128(number), 1)));
+    guess = _mm_mul_ss(_mm_set_ss(0.703952253f), _mm_mul_ss(guess, _mm_sub_ss(_mm_set_ss(2.38924456f), _mm_mul_ss(_mm_load_ss(&arg), _mm_mul_ss(guess, guess)))));
+    return _mm_cvtss_f32(guess);
+}
+
 void bench_rsqrt()
 {
     constexpr size_t baseIterations = 1000 * 1000;
     constexpr size_t repeats = 10;
-    constexpr size_t tests = 10;
+    constexpr size_t tests = 23;
     constexpr double singleTestDesiredDuration = 0.1;
 
     // Estimate iterations count to get around 0.1s of first test duration
@@ -210,9 +339,22 @@ void bench_rsqrt()
         benchmarks[i][test++] = TestSum<InvSqrtFast2>(iterations, "Hardware fast 2");
         benchmarks[i][test++] = TestSum<InvSqrtImprovedFast>(iterations, "Hardware fast + single Newton-Raphson iteration");
         benchmarks[i][test++] = TestSum<InvSqrtImprovedFast2>(iterations, "Hardware fast + two Newton-Raphson iterations");
+        benchmarks[i][test++] = TestSum<InvSqrtImprovedFast3>(iterations, "Hardware fast + two Newton-Raphson iterations (+ optimization)");
         benchmarks[i][test++] = TestSum<InvSqrtFastMasked>(iterations, "Hardware fast limited to 11bit preccission");
         benchmarks[i][test++] = TestSum<InvSqrtImprovedFastMasked>(iterations, "Hardware fast limited to 11bit preccission + single Newton-Raphson iteration");
         benchmarks[i][test++] = TestSum<InvSqrtImprovedFastMasked2>(iterations, "Hardware fast limited to 11bit preccission + two Newton-Raphson iterationsa");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApprox>(iterations, "Software fast approx");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApprox2>(iterations, "Software fast approx (better constant)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxSSE>(iterations, "Software fast approx (SSE)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxSSE2>(iterations, "Software fast approx (SSE, better constant)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImproved>(iterations, "Software fast approx + single Newton-Raphson iteration (unsafe cast)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImproved2>(iterations, "Software fast approx + single Newton-Raphson iteration (unsafe cast, better constants)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImproved3>(iterations, "Software fast approx + single Newton-Raphson iteration (memcopy instead unsafe cast)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImproved4>(iterations, "Software fast approx + single Newton-Raphson iteration (memcopy instead unsafe cast, better constants)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImprovedSSE1>(iterations, "Software fast approx + single Newton-Raphson iteration (integer on ALU, float on SSE)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImprovedSSE2>(iterations, "Software fast approx + single Newton-Raphson iteration (integer on ALU, float on SSE, better constants)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImprovedSSE3>(iterations, "Software fast approx + single Newton-Raphson iteration (all on SSE)");
+        benchmarks[i][test++] = TestSum<InvSqrtSoftFastApproxImprovedSSE4>(iterations, "Software fast approx + single Newton-Raphson iteration (all on SSE, better constants)");
         assert(test == tests);
     }
 
@@ -350,6 +492,16 @@ void test_error_rsqrt()
     TestError<InvSqrtAccurate, InvSqrtImprovedFast>().execute("hardware fast + single Newton-Raphson iteration");
     TestError<InvSqrtAccurate, InvSqrtImprovedFastMasked>().execute("hardware fast + masked + single Newton-Raphson iteration");
     TestError<InvSqrtImprovedFast, InvSqrtImprovedFastMasked>().execute("fast vs fast masked (both with single Newton-Raphson iteration)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApprox>().execute("software fast");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApprox2>().execute("software fast (better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxSSE>().execute("software fast (all on SSE, better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxSSE2>().execute("software fast (all on SSE, better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImproved>().execute("software fast + single Newton-Raphson iteration");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImproved2>().execute("software fast + single Newton-Raphson iteration (better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE1>().execute("software fast + single Newton-Raphson iteration (integer on ALU, float on SSE)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE2>().execute("software fast + single Newton-Raphson iteration (integer on ALU, float on SSE, better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE3>().execute("software fast + single Newton-Raphson iteration (all on SSE)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE4>().execute("software fast + single Newton-Raphson iteration (all on SSE, better constants)");
 }
 
 template<single_float_operation op>
@@ -472,6 +624,7 @@ void dump_rsqrt_data()
     DumpFloats<InvSqrtImprovedFast>().execute("rsqrt_fast_newton_raphson.dat");
     DumpFloats<InvSqrtFastMasked>().execute("rsqrt_fast_masked.dat");
     DumpFloats<InvSqrtImprovedFastMasked>().execute("rsqrt_fast_masked_newton_raphson.dat");
+    DumpFloats<InvSqrtSoftFastApproxImprovedSSE4>().execute("rsqrt_fast_soft_newton_raphson_sse.dat");
 }
 
 void compare_with_dump()
@@ -480,12 +633,14 @@ void compare_with_dump()
     CompareWithDump<InvSqrtFast>().execute("rsqrt_fast.dat");
     CompareWithDump<InvSqrtImprovedFast>().execute("rsqrt_fast_newton_raphson.dat");
     CompareWithDump<InvSqrtFastMasked>().execute("rsqrt_fast_masked.dat");
-    CompareWithDump<InvSqrtImprovedFastMasked>().execute("rsqrt_fast_masked_newton_raphson.dat");}
+    CompareWithDump<InvSqrtImprovedFastMasked>().execute("rsqrt_fast_masked_newton_raphson.dat");
+    CompareWithDump<InvSqrtSoftFastApproxImprovedSSE4>().execute("rsqrt_fast_soft_newton_raphson_sse.dat");
+}
 
 int main()
 {
     bench_rsqrt();
     test_error_rsqrt();
-    //dump_rsqrt_data();
+    dump_rsqrt_data();
     compare_with_dump();
 }
