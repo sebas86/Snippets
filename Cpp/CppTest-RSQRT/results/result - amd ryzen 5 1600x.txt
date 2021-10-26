@@ -3,91 +3,202 @@ AMD Ryzen 5 1600X
 Iterations: 33000000. Repeats: 10.
 Test: Reference
         - result: 3.35544e+07
-        - avg duration:      0.0963088
-        - median duration:   0.0966307
+        - avg duration:      0.0985126
+        - median duration:   0.098498
         - avg speed gain:    1
         - median speed gain: 1
 Test: Hardware accurate
         - result: 3.35544e+07
-        - avg duration:      0.143239
-        - median duration:   0.14261
-        - avg speed gain:    0.672366
-        - median speed gain: 0.67759
+        - avg duration:      0.147958
+        - median duration:   0.147836
+        - avg speed gain:    0.665813
+        - median speed gain: 0.666264
 Test: Hardware accurate 2
         - result: 3.35544e+07
-        - avg duration:      0.143275
-        - median duration:   0.14342
-        - avg speed gain:    0.672193
-        - median speed gain: 0.67376
+        - avg duration:      0.147909
+        - median duration:   0.147805
+        - avg speed gain:    0.666033
+        - median speed gain: 0.666407
 Test: Hardware fast
         - result: 3.35544e+07
-        - avg duration:      0.0461004
-        - median duration:   0.046207
-        - avg speed gain:    2.08911
-        - median speed gain: 2.09126
+        - avg duration:      0.0473042
+        - median duration:   0.047481
+        - avg speed gain:    2.08253
+        - median speed gain: 2.07447
 Test: Hardware fast 2
         - result: 3.35544e+07
-        - avg duration:      0.0458787
-        - median duration:   0.0460057
-        - avg speed gain:    2.09921
-        - median speed gain: 2.10041
+        - avg duration:      0.0474607
+        - median duration:   0.0472788
+        - avg speed gain:    2.07567
+        - median speed gain: 2.08334
 Test: Hardware fast + single Newton-Raphson iteration
         - result: 3.35544e+07
-        - avg duration:      0.0531312
-        - median duration:   0.0530866
-        - avg speed gain:    1.81266
-        - median speed gain: 1.82025
+        - avg duration:      0.055065
+        - median duration:   0.0551229
+        - avg speed gain:    1.78902
+        - median speed gain: 1.78688
 Test: Hardware fast + two Newton-Raphson iterations
         - result: 3.35544e+07
-        - avg duration:      0.0957653
-        - median duration:   0.0959421
-        - avg speed gain:    1.00568
-        - median speed gain: 1.00718
+        - avg duration:      0.0985166
+        - median duration:   0.0984894
+        - avg speed gain:    0.99996
+        - median speed gain: 1.00009
+Test: Hardware fast + two Newton-Raphson iterations (+ optimization)
+        - result: 3.35544e+07
+        - avg duration:      0.0830651
+        - median duration:   0.0828621
+        - avg speed gain:    1.18597
+        - median speed gain: 1.1887
 Test: Hardware fast limited to 11bit preccission
         - result: 3.35544e+07
-        - avg duration:      0.0424956
-        - median duration:   0.0425906
-        - avg speed gain:    2.26633
-        - median speed gain: 2.26883
+        - avg duration:      0.0439291
+        - median duration:   0.0440383
+        - avg speed gain:    2.24253
+        - median speed gain: 2.23664
 Test: Hardware fast limited to 11bit preccission + single Newton-Raphson iteration
         - result: 3.35544e+07
-        - avg duration:      0.0587407
-        - median duration:   0.0586461
-        - avg speed gain:    1.63956
-        - median speed gain: 1.64769
+        - avg duration:      0.060708
+        - median duration:   0.0604231
+        - avg speed gain:    1.62273
+        - median speed gain: 1.63014
 Test: Hardware fast limited to 11bit preccission + two Newton-Raphson iterationsa
         - result: 3.35544e+07
-        - avg duration:      0.10491
-        - median duration:   0.103056
-        - avg speed gain:    0.918016
-        - median speed gain: 0.937655
-Error test: reference. Duration: 21.9356
+        - avg duration:      0.106877
+        - median duration:   0.106786
+        - avg speed gain:    0.921736
+        - median speed gain: 0.922389
+Test: Software fast approx
+        - result: 3.35544e+07
+        - avg duration:      0.0468484
+        - median duration:   0.0469229
+        - avg speed gain:    2.1028
+        - median speed gain: 2.09915
+Test: Software fast approx (better constant)
+        - result: 3.35544e+07
+        - avg duration:      0.0467623
+        - median duration:   0.046823
+        - avg speed gain:    2.10667
+        - median speed gain: 2.10362
+Test: Software fast approx (SSE)
+        - result: 3.35544e+07
+        - avg duration:      0.0453441
+        - median duration:   0.0458533
+        - avg speed gain:    2.17256
+        - median speed gain: 2.14811
+Test: Software fast approx (SSE, better constant)
+        - result: 3.35544e+07
+        - avg duration:      0.0458273
+        - median duration:   0.0461928
+        - avg speed gain:    2.14965
+        - median speed gain: 2.13232
+Test: Software fast approx + single Newton-Raphson iteration (unsafe cast)
+        - result: 3.35544e+07
+        - avg duration:      0.062249
+        - median duration:   0.0618938
+        - avg speed gain:    1.58256
+        - median speed gain: 1.5914
+Test: Software fast approx + single Newton-Raphson iteration (unsafe cast, better constants)
+        - result: 3.35544e+07
+        - avg duration:      0.0666047
+        - median duration:   0.0663316
+        - avg speed gain:    1.47906
+        - median speed gain: 1.48493
+Test: Software fast approx + single Newton-Raphson iteration (memcopy instead unsafe cast)
+        - result: 3.35544e+07
+        - avg duration:      0.0619851
+        - median duration:   0.0618639
+        - avg speed gain:    1.58929
+        - median speed gain: 1.59217
+Test: Software fast approx + single Newton-Raphson iteration (memcopy instead unsafe cast, better constants)
+        - result: 3.35544e+07
+        - avg duration:      0.0662527
+        - median duration:   0.0662505
+        - avg speed gain:    1.48692
+        - median speed gain: 1.48675
+Test: Software fast approx + single Newton-Raphson iteration (integer on ALU, float on SSE)
+        - result: 3.35544e+07
+        - avg duration:      0.0649435
+        - median duration:   0.0646476
+        - avg speed gain:    1.5169
+        - median speed gain: 1.52361
+Test: Software fast approx + single Newton-Raphson iteration (integer on ALU, float on SSE, better constants)
+        - result: 3.35544e+07
+        - avg duration:      0.0686783
+        - median duration:   0.0683027
+        - avg speed gain:    1.43441
+        - median speed gain: 1.44208
+Test: Software fast approx + single Newton-Raphson iteration (all on SSE)
+        - result: 3.35544e+07
+        - avg duration:      0.0566163
+        - median duration:   0.0566228
+        - avg speed gain:    1.74
+        - median speed gain: 1.73955
+Test: Software fast approx + single Newton-Raphson iteration (all on SSE, better constants)
+        - result: 3.35544e+07
+        - avg duration:      0.0598868
+        - median duration:   0.0594717
+        - avg speed gain:    1.64498
+        - median speed gain: 1.65622
+Error test: reference. Duration: 23.6638
         - min: 0 (input=1.4013e-45, result_1=2.67137e+22, result_2=2.67137e+22)
         - max: 0 (input=0, result_1=0, result_2=0)
-Error test: hardware fast. Duration: 13.6353
+Error test: hardware fast. Duration: 14.164
         - min: 0 (input=1.17779e-38, result_1=9.21436e+18, result_2=9.21436e+18)
         - max: 1.19209e-07 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42101e-20)
-Error test: hardware fast + single Newton-Raphson iteration. Duration: 20.5978
+Error test: hardware fast + single Newton-Raphson iteration. Duration: 20.7552
         - min: 0 (input=1.17549e-38, result_1=9.22337e+18, result_2=9.22337e+18)
         - max: 1.19209e-07 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42101e-20)
-Error test: hardware fast + masked + single Newton-Raphson iteration. Duration: 22.566
+Error test: hardware fast + masked + single Newton-Raphson iteration. Duration: 23.0757
         - min: 0 (input=1.1762e-38, result_1=9.22061e+18, result_2=9.22061e+18)
         - max: 1.19209e-07 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42101e-20)
-Error test: fast vs fast masked (both with single Newton-Raphson iteration). Duration: 13.3373
+Error test: fast vs fast masked (both with single Newton-Raphson iteration). Duration: 13.9967
         - min: 0 (input=1.17596e-38, result_1=9.22154e+18, result_2=9.22154e+18)
         - max: 1.19195e-07 (input=3.40199e+38, result_1=5.42167e-20, result_2=5.42167e-20)
-Compare result with reference from file rsqrt_accurate.dat... done. Duration: 21.3849
+Error test: software fast. Duration: 12.6998
+        - min: 0 (input=1.38175e-38, result_1=8.50717e+18, result_2=8.50717e+18)
+        - max: 0.033785 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.23786e-20)
+Error test: software fast (better constants). Duration: 21.9692
+        - min: 0.0814418 (input=1.76304e-38, result_1=7.53128e+18, result_2=6.91792e+18)
+        - max: 0.125 (input=3.40282e+38, result_1=5.42101e-20, result_2=4.74338e-20)
+Error test: software fast (all on SSE, better constants). Duration: 21.4954
+        - min: 0 (input=1.38175e-38, result_1=8.50717e+18, result_2=8.50717e+18)
+        - max: 0.033785 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.23786e-20)
+Error test: software fast (all on SSE, better constants). Duration: 21.8913
+        - min: 0.0814418 (input=1.76304e-38, result_1=7.53128e+18, result_2=6.91792e+18)
+        - max: 0.125 (input=3.40282e+38, result_1=5.42101e-20, result_2=4.74338e-20)
+Error test: software fast + single Newton-Raphson iteration. Duration: 22.2602
+        - min: 0 (input=1.37885e-38, result_1=8.5161e+18, result_2=8.5161e+18)
+        - max: 0.00169289 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.41183e-20)
+Error test: software fast + single Newton-Raphson iteration (better constants). Duration: 21.6752
+        - min: 0 (input=1.16792e-38, result_1=9.25324e+18, result_2=9.25324e+18)
+        - max: 8.16584e-05 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42145e-20)
+Error test: software fast + single Newton-Raphson iteration (integer on ALU, float on SSE). Duration: 22.7943
+        - min: 0 (input=1.37892e-38, result_1=8.5159e+18, result_2=8.5159e+18)
+        - max: 0.00169301 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.41183e-20)
+Error test: software fast + single Newton-Raphson iteration (integer on ALU, float on SSE, better constants). Duration: 22.0576
+        - min: 0 (input=1.16792e-38, result_1=9.25324e+18, result_2=9.25324e+18)
+        - max: 8.15391e-05 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42145e-20)
+Error test: software fast + single Newton-Raphson iteration (all on SSE). Duration: 22.4939
+        - min: 0 (input=1.37892e-38, result_1=8.5159e+18, result_2=8.5159e+18)
+        - max: 0.00169301 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.41183e-20)
+Error test: software fast + single Newton-Raphson iteration (all on SSE, better constants). Duration: 22.4579
+        - min: 0 (input=1.16792e-38, result_1=9.25324e+18, result_2=9.25324e+18)
+        - max: 8.15391e-05 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42145e-20)
+Compare result with reference from file rsqrt_accurate.dat... done. Duration: 56.3973
         - min: 0 (input=1.4013e-45, result_1=2.67137e+22, result_2=2.67137e+22)
         - max: 0 (input=0, result_1=0, result_2=0)
-Compare result with reference from file rsqrt_fast.dat... done. Duration: 21.047
+Compare result with reference from file rsqrt_fast.dat... done. Duration: 42.2557
         - min: 0 (input=1.17578e-38, result_1=9.22112e+18, result_2=9.22112e+18)
         - max: 0.000244081 (input=3.40282e+38, result_1=5.42233e-20, result_2=5.42101e-20)
-Compare result with reference from file rsqrt_fast_newton_raphson.dat... done. Duration: 26.6332
+Compare result with reference from file rsqrt_fast_newton_raphson.dat... done. Duration: 24.4436
         - min: 0 (input=1.17578e-38, result_1=9.22225e+18, result_2=9.22225e+18)
         - max: 1.19209e-07 (input=3.40282e+38, result_1=5.42101e-20, result_2=5.42101e-20)
-Compare result with reference from file rsqrt_fast_masked.dat... done. Duration: 21.4087
+Compare result with reference from file rsqrt_fast_masked.dat... done. Duration: 22.3076
         - min: 0 (input=1.17549e-38, result_1=9.21887e+18, result_2=9.21887e+18)
         - max: 0.00097561 (input=3.39784e+38, result_1=5.4263e-20, result_2=5.42101e-20)
-Compare result with reference from file rsqrt_fast_masked_newton_raphson.dat... done. Duration: 29.4149
+Compare result with reference from file rsqrt_fast_masked_newton_raphson.dat... done. Duration: 25.9867
         - min: 0 (input=1.17549e-38, result_1=9.22337e+18, result_2=9.22337e+18)
         - max: 8.33854e-07 (input=3.39784e+38, result_1=5.42499e-20, result_2=5.42498e-20)
+Compare result with reference from file rsqrt_fast_soft_newton_raphson_sse.dat... done. Duration: 22.7967
+        - min: 0 (input=0, result_1=1.93911e+19, result_2=1.93911e+19)
+        - max: 0 (input=0, result_1=0, result_2=0)
