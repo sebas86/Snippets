@@ -11,9 +11,11 @@
 #include <numeric>
 #include <thread>
 #include <vector>
+#include <cinttypes>
 
 #include <intrin.h>
 
+using std::cin;
 using std::cout;
 using std::endl;
 using std::flush;
@@ -101,7 +103,11 @@ void IterateAllPositiveFloats(void(*op)(void* userData, float value, int32_t ind
 
     op(userData, allFloats.f, allFloats.i);
 
+#if defined(_DEBUG)
+    while (allFloats.RawExponent() < 2)
+#else
     while (allFloats.RawExponent() < 255)
+#endif
     {
         allFloats.i += 1;
         op(userData, allFloats.f, allFloats.i);
@@ -244,7 +250,7 @@ float InvSqrtSoftFastApproxImproved(float arg)
 float InvSqrtSoftFastApproxImproved2(float arg)
 {
     uint32_t i;
-    float x2, y;
+    float y;
 
     y = arg;
     i = *(uint32_t*)&y;
@@ -272,7 +278,7 @@ float InvSqrtSoftFastApproxImproved3(float arg)
 float InvSqrtSoftFastApproxImproved4(float arg)
 {
     uint32_t i;
-    float x2, y;
+    float y;
 
     y = arg;
     memcpy(&i, &y, sizeof(y));
@@ -303,7 +309,7 @@ float InvSqrtSoftFastApproxImprovedSSE3(float arg)
 {
     const __m128 number = _mm_load_ss(&arg);
     __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5f3759df), _mm_srai_epi32(_mm_castps_si128(number), 1)));
-    const __m128 arg2 = _mm_mul_ss(_mm_set_ss(-0.5f), _mm_load_ss(&arg));
+    const __m128 arg2 = _mm_mul_ss(_mm_set_ss(-0.5f), number);
     guess = _mm_mul_ss(guess, _mm_add_ss(_mm_set_ss(1.5f), _mm_mul_ss(arg2, _mm_mul_ss(guess, guess))));
     return _mm_cvtss_f32(guess);
 }
@@ -312,21 +318,24 @@ float InvSqrtSoftFastApproxImprovedSSE4(float arg)
 {
     const __m128 number = _mm_load_ss(&arg);
     __m128 guess = _mm_castsi128_ps(_mm_sub_epi32(_mm_set1_epi32(0x5F1FFFF9), _mm_srai_epi32(_mm_castps_si128(number), 1)));
-    guess = _mm_mul_ss(_mm_set_ss(0.703952253f), _mm_mul_ss(guess, _mm_sub_ss(_mm_set_ss(2.38924456f), _mm_mul_ss(_mm_load_ss(&arg), _mm_mul_ss(guess, guess)))));
+    guess = _mm_mul_ss(_mm_set_ss(0.703952253f), _mm_mul_ss(guess, _mm_sub_ss(_mm_set_ss(2.38924456f), _mm_mul_ss(number, _mm_mul_ss(guess, guess)))));
     return _mm_cvtss_f32(guess);
 }
 
 void bench_rsqrt()
 {
     constexpr size_t baseIterations = 1000 * 1000;
-    constexpr size_t repeats = 10;
+    constexpr size_t repeats = 20;
     constexpr size_t tests = 23;
     constexpr double singleTestDesiredDuration = 0.1;
 
-    // Estimate iterations count to get around 0.1s of first test duration
     size_t iterations = baseIterations * 10;
+
+#if 0
+    // Estimate iterations count to get around 0.1s of first test duration
     auto result = TestSum<InvSqrtReference>(iterations, "initial");
     iterations = std::max(static_cast<size_t>(1), static_cast<size_t>(iterations / baseIterations * singleTestDesiredDuration / result.duration)) * baseIterations;
+#endif
 
     FloatOperationBenchResult benchmarks[repeats][tests];
     for (size_t i = 0; i < repeats; ++i)
@@ -366,7 +375,6 @@ void bench_rsqrt()
     {
         const auto& firstBench = benchmarks[0][test];
 
-        cout << "Test: " << firstBench.name << endl << "\t- result: " << firstBench.result << endl;
         std::vector<double> durations;
         for (size_t i = 0; i < repeats; ++i)
         {
@@ -379,7 +387,7 @@ void bench_rsqrt()
             durations.push_back(bench.duration);
         }
         std::sort(durations.begin(), durations.end());
-        const auto avg = std::accumulate(durations.begin(), durations.end(), 0.0f) / static_cast<double>(repeats);
+        const auto avg = std::accumulate(durations.begin(), durations.end(), 0.0) / static_cast<double>(repeats);
         const auto median = durations[repeats / 2];
         if (test == 0)
         {
@@ -387,6 +395,8 @@ void bench_rsqrt()
             referenceMedian = median;
         }
         
+        cout << "Test: " << firstBench.name << endl;
+        cout << "\t- result:            " << firstBench.result << endl;
         cout << "\t- avg duration:      " << avg << endl;
         cout << "\t- median duration:   " << median << endl;
         cout << "\t- avg speed gain:    " << (referenceAvg / avg) << endl;
@@ -394,58 +404,92 @@ void bench_rsqrt()
     }
 }
 
-static float test_error_min;
-static float test_error_max;
-static float test_error_min_res_op1;
-static float test_error_min_res_op2;
-static float test_error_max_res_op1;
-static float test_error_max_res_op2;
-
 struct Error
 {
     float errorValue;
     float inputValue;
     float outputValue1;
     float outputValue2;
+
+    void setAll(float aErrorValue, float aInputValue, float aOutputValue1, float aOutputValue2)
+    {
+        errorValue = aErrorValue;
+        inputValue = aInputValue;
+        outputValue1 = aOutputValue1;
+        outputValue2 = aOutputValue2;
+    }
 };
 
 struct ErrorTestData
 {
     Error errorMin;
     Error errorMax;
+    float inputValueMin;
+    float inputValueMax;
+    float outputForInputValueMin;
+    float outputForInputValueMax;
+    double errorAvg;
+    uint32_t samples;
+    bool hasResultNaN;
 
     ErrorTestData()
     {
-        memset(&errorMin, 0, sizeof(errorMin));
-        memset(&errorMax, 0, sizeof(errorMax));
-
-        errorMin.errorValue = FLT_MAX;
+        errorMin.setAll(std::numeric_limits<float>::infinity(), 0, 0, 0);
+        errorMax.setAll(0, 0, 0, 0);
+        inputValueMin = std::numeric_limits<float>::infinity();
+        inputValueMax = 0;
+        outputForInputValueMin = 0;
+        outputForInputValueMax = 0;
+        errorAvg = 0;
+        samples = 0;
+        hasResultNaN = false;
     }
 
     void update(float inputValue, float result1, float result2)
     {
-        if (result1 > FLT_MAX || result1 < FLT_MIN || result2 > FLT_MAX || result2 < FLT_MIN)
+        if (std::isnan(inputValue))
             return;
 
-        auto error = result2 - result1;
-        if (result1 != 0)
-            error /= result1;
-        if (error < 0)
-            error = -error;
+        if (std::isnan(result2))
+            hasResultNaN = true;
+
+        if (inputValueMin > inputValue)
+        {
+            inputValueMin = inputValue;
+            outputForInputValueMin = result2;
+        }
+        if (inputValueMax < inputValue)
+        {
+            inputValueMax = inputValue;
+            outputForInputValueMax = result2;
+        }
+
+        if (std::isnan(result1) || std::isnan(result2))
+            return;
+
+        // ignore inf values
+        if (result1 < 0)
+            result1 = -result1;
+        if (result2 < 0)
+            result2 = -result2;
+        if (result1 > std::numeric_limits<float>::max() || result2 > std::numeric_limits<float>::max())
+            return;
+
+        double errorHighPrecision = (double)result2 - (double)result1;
+        if (result1 > 0)
+            errorHighPrecision /= (double)result1;
+        if (errorHighPrecision < 0)
+            errorHighPrecision = -errorHighPrecision;
+
+        const float error = (float)errorHighPrecision;
+
         if (errorMin.errorValue > error)
-        {
-            errorMin.errorValue = error;
-            errorMin.inputValue = inputValue;
-            errorMin.outputValue1 = result1;
-            errorMin.outputValue2 = result2;
-        }
-        if (test_error_max < error)
-        {
-            errorMax.errorValue = error;
-            errorMax.inputValue = inputValue;
-            errorMax.outputValue1 = result1;
-            errorMax.outputValue2 = result2;
-        }
+            errorMin.setAll(error, inputValue, result1, result2);
+        if (errorMax.errorValue < error)
+            errorMax.setAll(error, inputValue, result1, result2);
+
+        ++samples;
+        errorAvg = ((samples - 1) * errorAvg + errorHighPrecision) / (double)samples;
     }
 };
 std::ostream& operator <<(std::ostream& os, const Error& error)
@@ -454,7 +498,9 @@ std::ostream& operator <<(std::ostream& os, const Error& error)
 }
 std::ostream& operator <<(std::ostream& os, const ErrorTestData& data)
 {
-    return os << "\t- min: " << data.errorMin << endl << "\t- max: " << data.errorMax << endl;
+    if (data.hasResultNaN)
+        cout << "\t- has not a number result!" << endl;
+    return os << "\t- min: " << data.errorMin << endl << "\t- max: " << data.errorMax << endl << "\t- avg: " << data.errorAvg << endl;
 }
 
 template<single_float_operation op1, single_float_operation op2>
@@ -494,7 +540,7 @@ void test_error_rsqrt()
     TestError<InvSqrtImprovedFast, InvSqrtImprovedFastMasked>().execute("fast vs fast masked (both with single Newton-Raphson iteration)");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApprox>().execute("software fast");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApprox2>().execute("software fast (better constants)");
-    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxSSE>().execute("software fast (all on SSE, better constants)");
+    TestError<InvSqrtAccurate, InvSqrtSoftFastApproxSSE>().execute("software fast (all on SSE)");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxSSE2>().execute("software fast (all on SSE, better constants)");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImproved>().execute("software fast + single Newton-Raphson iteration");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImproved2>().execute("software fast + single Newton-Raphson iteration (better constants)");
@@ -502,6 +548,61 @@ void test_error_rsqrt()
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE2>().execute("software fast + single Newton-Raphson iteration (integer on ALU, float on SSE, better constants)");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE3>().execute("software fast + single Newton-Raphson iteration (all on SSE)");
     TestError<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE4>().execute("software fast + single Newton-Raphson iteration (all on SSE, better constants)");
+}
+
+template<single_float_operation op1, single_float_operation op2>
+class TestErrorCluster
+{
+private:
+#if defined(_DEBUG)
+    static constexpr size_t clusters = 3;
+#else
+    static constexpr size_t clusters = 256;
+#endif
+
+    static void testInternal(void* userData, float inputValue, int32_t index)
+    {
+        const size_t clusterIndex = Float_t(inputValue).RawExponent();
+        assert(clusterIndex >= 0 && clusterIndex < clusters);
+
+        const auto result1 = op1(inputValue);
+        const auto result2 = op2(inputValue);
+
+        ErrorTestData& testData = reinterpret_cast<ErrorTestData*>(userData)[clusterIndex];
+        testData.update(inputValue, result1, result2);
+    }
+
+public:
+    void execute(const char* testName)
+    {
+        ErrorTestData testData[clusters];
+
+        Timer timer;
+        timer.start();
+        IterateAllPositiveFloats(testInternal, testData);
+        timer.stop();
+
+        cout << "Error test: " << testName << ". Duration: " << timer.getDuration() << endl;
+        printf("Index, %12s, %12s, %12s, %12s, %12s, %12s, %12s\n", "input min", "input max", "out for min", "out for max", "error min", "error max", "error avg");
+        for (size_t i = 0; i < clusters; ++i)
+        {
+            const auto& test = testData[i];
+            printf("%5" PRIiPTR ", %12e, %12e, %12e, %12e, %12e, %12e, %12e\n", i, test.inputValueMin, test.inputValueMax,
+                test.outputForInputValueMin, test.outputForInputValueMax,
+                test.errorMin.errorValue, test.errorMax.errorValue, test.errorAvg);
+            //cout << "Cluster " << i << "<" << test.inputValueMin << ", " << test.inputValueMax << ">:" << endl;
+            //cout << test;
+        }
+    }
+};
+
+void test_error_cluster_rsqrt()
+{
+    TestErrorCluster<InvSqrtAccurate, InvSqrtFast>().execute("hardware fast");
+    TestErrorCluster<InvSqrtAccurate, InvSqrtImprovedFast>().execute("hardware fast + single Newton-Raphson iteration");
+    TestErrorCluster<InvSqrtAccurate, InvSqrtImprovedFastMasked>().execute("fast masked + single Newton-Raphson iteration");
+    TestErrorCluster<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE3>().execute("software fast + single Newton-Raphson iteration (all on SSE)");
+    TestErrorCluster<InvSqrtAccurate, InvSqrtSoftFastApproxImprovedSSE4>().execute("software fast + single Newton-Raphson iteration (all on SSE, better constants)");
 }
 
 template<single_float_operation op>
@@ -564,11 +665,9 @@ private:
 
         TestData()
         {
-            memset(&errorMin, 0, sizeof(errorMin));
-            memset(&errorMax, 0, sizeof(errorMax));
+            errorMin.setAll(std::numeric_limits<float>::infinity(), 0, 0, 0);
+            errorMax.setAll(0, 0, 0, 0);
             memset(buff, 0, buffSize * sizeof(buff[0]));
-
-            errorMin.errorValue = FLT_MAX;
         }
 
         void readData()
@@ -637,10 +736,35 @@ void compare_with_dump()
     CompareWithDump<InvSqrtSoftFastApproxImprovedSSE4>().execute("rsqrt_fast_soft_newton_raphson_sse.dat");
 }
 
+bool askQuestionYesNoQuit(const char* description)
+{
+    bool result;
+    cout << description << " (0 - no, 1 - yes, other - quit)" << endl;
+    cin.clear();
+    cin >> result;
+    if (cin.fail())
+        exit(-1);
+    return result;
+}
+
 int main()
 {
-    bench_rsqrt();
-    test_error_rsqrt();
-    dump_rsqrt_data();
-    compare_with_dump();
+    const bool performBench = askQuestionYesNoQuit("Perform benchmarks?");
+    const bool testErrorMinMaxAvg = askQuestionYesNoQuit("Test min/max/avg errors?");
+    const bool testErrorMinMaxAvgPerCluster = askQuestionYesNoQuit("Test min/max/avg errors per cluster?");
+    const bool createDataDump = askQuestionYesNoQuit("Create data dump?");
+    const bool compareDataDump = askQuestionYesNoQuit("Compare test resulst with data dump?");
+
+    if (performBench)
+        bench_rsqrt();
+    if (testErrorMinMaxAvg)
+        test_error_rsqrt();
+    if (testErrorMinMaxAvgPerCluster)
+        test_error_cluster_rsqrt();
+    if (createDataDump)
+        dump_rsqrt_data();
+    if (compareDataDump)
+        compare_with_dump();
+
+    return 0;
 }
