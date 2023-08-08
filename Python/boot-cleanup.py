@@ -8,6 +8,10 @@ import re
 import shutil
 
 
+class DefaultArguments:
+    KeepVersions = 3
+
+
 def natural_sort_key(s, _nsre=re.compile('([0-9]+)')):
     return [int(text) if text.isdigit() else text.lower()
             for text in _nsre.split(s)]
@@ -35,24 +39,24 @@ def cleanup(base_dir: pathlib.Path, keep_versions: int, pretend: bool, verbose: 
         if not os.path.isdir(removed_dir_path):
             os.mkdir(removed_dir_path)
 
-    if len(versions) > keep_versions:
-        log(pretend, verbose, "to remove:" if pretend else "removing:")
-        for i in range(0, max(0, len(versions) - keep_versions)):
-            version = versions[i]
-            related_files = get_related_files(base_dir, version)
-            log(pretend, verbose, '-', version)
-            for path in related_files:
-                log(pretend, verbose, '\t-', path)
-                if pretend:
-                    continue
-                try:
-                    shutil.move(path, removed_dir_path)
-                except PermissionError as e:
-                    print(("\t  " if pretend or verbose else "") + "can't remove:", str(e))
+    versions_to_remove = versions[0: max(0, len(versions) - keep_versions)]
+    versions_to_keep = list(set(versions) - set(versions_to_remove))
+
+    log(pretend, verbose, "to remove:" if pretend else "removing:")
+    for version in versions_to_remove:
+        related_files = get_related_files(base_dir, version)
+        log(pretend, verbose, '-', version)
+        for path in related_files:
+            log(pretend, verbose, '\t-', path)
+            if pretend:
+                continue
+            try:
+                shutil.move(path, removed_dir_path)
+            except PermissionError as e:
+                print(("\t  " if pretend or verbose else "") + "can't remove:", str(e))
 
     log(pretend, verbose, "to keep:" if pretend else "keeping:")
-    for i in range(max(0, len(versions) - keep_versions), len(versions)):
-        version = versions[i]
+    for version in versions_to_keep:
         related_files = get_related_files(base_dir, version)
         log(pretend, verbose, '-', version)
         for path in related_files:
@@ -64,7 +68,7 @@ def main():
     parser.add_argument("--base-dir", default="/boot")
     parser.add_argument("--pretend", action="store_true", default=False)
     parser.add_argument("--verbose", action="store_true", default=False)
-    parser.add_argument("--keep-versions", type=int, default=2, help="How many versions should be keeped (default: 2)")
+    parser.add_argument("--keep-versions", type=int, default=DefaultArguments.KeepVersions, help=f"How many versions should be keeped (default: {DefaultArguments.KeepVersions})")
     args = parser.parse_args()
 
     cleanup(pathlib.PosixPath(args.base_dir), keep_versions=args.keep_versions, pretend=args.pretend,
