@@ -22,3 +22,9 @@ profile
 
 # MacOS
 .DS_Store
+
+# Build systems
+cmake-build-*/
+
+# IDEs
+.idea/
