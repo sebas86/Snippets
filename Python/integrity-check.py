@@ -11,6 +11,11 @@ from typing import NamedTuple
 from types import SimpleNamespace
 
 
+# References
+# https://en.wikipedia.org/wiki/Data_corruption
+# https://en.wikipedia.org/wiki/Error_detection_and_correction
+
+
 # assumptions:
 # - same modification time in history file and current state => no changes
 # - same modification time in history file and current state but different checksum => file corruption
