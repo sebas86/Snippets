@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 
+special_postfix_old = '.old'
 
 class DefaultArguments:
     KeepVersions = 3
@@ -30,8 +31,18 @@ def get_current_kernel_version() -> str:
 
 
 def get_related_files(base_dir: pathlib.Path, version_postfix: str):
-    pattern = str(base_dir.joinpath("*" + version_postfix))
-    return glob.glob(pattern)
+    get_old_version = is_old_version(version_postfix)
+    if get_old_version:
+        version_postfix = version_postfix[0:len(version_postfix) - len(special_postfix_old)]
+    files = glob.glob(str(base_dir.joinpath("*" + version_postfix + "*")))
+    return filter(is_old_version if get_old_version else is_not_old_version, files)
+
+
+def is_old_version(version: str) -> bool:
+    return str(version).lower().endswith(special_postfix_old)
+
+def is_not_old_version(version: str) -> bool:
+    return not is_old_version(version)
 
 
 def log(pretend: bool, verbose: bool, *args):
@@ -45,7 +56,7 @@ def cleanup(base_dir: pathlib.Path, ignore_current_version: bool, ignore_current
     for path in glob.glob(str(base_dir.joinpath("vmlinuz-*")), recursive=False):
         versions.add(re.match(r".*vmlinuz-(.*)", path)[1])
 
-    old_versions = set(filter(lambda version: 'old' in str(version).lower(), versions))
+    old_versions = set(filter(is_old_version, versions))
 
     if not pretend:
         removed_dir_path = base_dir.joinpath("removed")
@@ -54,7 +65,7 @@ def cleanup(base_dir: pathlib.Path, ignore_current_version: bool, ignore_current
 
     current_kernel_version = get_current_kernel_version()
     versions_similar_to_current_kernel = set(filter(lambda version: current_kernel_version in str(version), versions))
-    old_versions_similar_to_current_kernel = set(filter(lambda version: 'old' in str(version).lower(), versions_similar_to_current_kernel))
+    old_versions_similar_to_current_kernel = set(filter(is_old_version, versions_similar_to_current_kernel))
     versions_similar_to_current_kernel.difference_update(old_versions_similar_to_current_kernel)
 
     if 0 < len(versions_similar_to_current_kernel):
