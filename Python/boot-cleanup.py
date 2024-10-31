@@ -30,7 +30,7 @@ def get_current_kernel_version() -> str:
 
 
 def get_related_files(base_dir: pathlib.Path, version_postfix: str):
-    pattern = str(base_dir.joinpath("*" + version_postfix + "*"))
+    pattern = str(base_dir.joinpath("*" + version_postfix))
     return glob.glob(pattern)
 
 
@@ -39,35 +39,54 @@ def log(pretend: bool, verbose: bool, *args):
         print(*args)
 
 
-def cleanup(base_dir: pathlib.Path, ignore_current_version: bool, keep_versions: int, pretend: bool, verbose: bool):
+def cleanup(base_dir: pathlib.Path, ignore_current_version: bool, ignore_current_old_version: bool, keep_versions: int, pretend: bool, verbose: bool):
     assert (keep_versions >= 0)
-    versions = []
+    versions = set()
     for path in glob.glob(str(base_dir.joinpath("vmlinuz-*")), recursive=False):
-        versions.append(re.match(r".*vmlinuz-(.*)", path)[1])
-    versions.sort(key=natural_sort_key)
+        versions.add(re.match(r".*vmlinuz-(.*)", path)[1])
+
+    old_versions = set(filter(lambda version: 'old' in str(version).lower(), versions))
 
     if not pretend:
         removed_dir_path = base_dir.joinpath("removed")
         if not os.path.isdir(removed_dir_path):
             os.mkdir(removed_dir_path)
 
-    versions_similar_to_current_kernel = []
-    if not ignore_current_version:
-        current_kernel_version = get_current_kernel_version()
-        versions_similar_to_current_kernel = list(
-            filter(lambda version: str(version).find(current_kernel_version) >= 0, versions))
-        if 0 < len(versions_similar_to_current_kernel):
-            log(pretend, verbose, f"keeping versions looking like currently running kernel ({current_kernel_version}):")
-            for version in sorted(versions_similar_to_current_kernel):
-                log(pretend, verbose, '-', version)
-            versions = list(set(versions) - set(versions_similar_to_current_kernel))
-            versions.sort(key=natural_sort_key)
+    current_kernel_version = get_current_kernel_version()
+    versions_similar_to_current_kernel = set(filter(lambda version: current_kernel_version in str(version), versions))
+    old_versions_similar_to_current_kernel = set(filter(lambda version: 'old' in str(version).lower(), versions_similar_to_current_kernel))
+    versions_similar_to_current_kernel.difference_update(old_versions_similar_to_current_kernel)
 
-    versions_to_remove = versions[0: max(0, len(versions) + len(versions_similar_to_current_kernel) - keep_versions)]
-    versions_to_keep = list(set(versions) - set(versions_to_remove) | set(versions_similar_to_current_kernel))
+    if 0 < len(versions_similar_to_current_kernel):
+        log(pretend, verbose, f"versions looking like currently running kernel ({current_kernel_version}):")
+        for version in sorted(versions_similar_to_current_kernel):
+            log(pretend, verbose, '-', version)
+    if 0 < len(old_versions_similar_to_current_kernel):
+        log(pretend, verbose, f"old versions looking like currently running kernel ({current_kernel_version}):")
+        for version in sorted(old_versions_similar_to_current_kernel):
+            log(pretend, verbose, '-', version)
 
-    versions_to_remove.sort(key=natural_sort_key)
-    versions_to_keep.sort(key=natural_sort_key)
+    if ignore_current_version:
+        versions_similar_to_current_kernel.clear()
+
+    if ignore_current_version or ignore_current_old_version:
+        old_versions_similar_to_current_kernel.clear()
+
+    old_versions.difference_update(old_versions_similar_to_current_kernel)
+    other_versions = versions - versions_similar_to_current_kernel - old_versions_similar_to_current_kernel - old_versions
+
+    versions_in_order = (sorted(old_versions, key=natural_sort_key)
+                         + sorted(other_versions, key=natural_sort_key)
+                         + sorted(old_versions_similar_to_current_kernel, key=natural_sort_key)
+                         + sorted(versions_similar_to_current_kernel, key=natural_sort_key))
+
+    assert len(versions) == len(versions_in_order)
+
+    keep_versions = max(0, keep_versions, max(0, keep_versions - 1) + len(versions_similar_to_current_kernel) + len(old_versions_similar_to_current_kernel))
+    versions_cut_line = max(0, len(versions_in_order) - keep_versions)
+
+    versions_to_remove = versions_in_order[0:versions_cut_line]
+    versions_to_keep = versions_in_order[versions_cut_line:]
 
     log(pretend, verbose, "to remove:" if pretend else "removing:")
     for version in versions_to_remove:
@@ -92,17 +111,19 @@ def cleanup(base_dir: pathlib.Path, ignore_current_version: bool, keep_versions:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-dir", default="/boot")
-    parser.add_argument("--ignore-current-version", action="store_true", default=False,
+    parser.add_argument("-d", "--base-dir", default="/boot")
+    parser.add_argument("-c", "--ignore-current-version", action="store_true", dest='ignore_current_version',
                         help="Don't try to check and preserve currently running kernel")
-    parser.add_argument("--keep-versions", type=int, default=DefaultArguments.KeepVersions,
-                        help=f"How many versions should be keeped (default: {DefaultArguments.KeepVersions})")
-    parser.add_argument("--pretend", action="store_true", default=False)
-    parser.add_argument("--verbose", action="store_true", default=False)
+    parser.add_argument("-o", "--ignore-current-old-version", action="store_true", dest='ignore_current_old_version',
+                        help="Don't try to check and preserve old version of currently running kernel")
+    parser.add_argument("-k", "--keep-versions", type=int, default=DefaultArguments.KeepVersions,
+                        help=f"How many versions should be kept (default: {DefaultArguments.KeepVersions})")
+    parser.add_argument("-p", "--pretend", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
     cleanup(pathlib.PosixPath(args.base_dir), ignore_current_version=args.ignore_current_version,
-            keep_versions=args.keep_versions, pretend=args.pretend, verbose=args.verbose)
+            ignore_current_old_version=args.ignore_current_old_version, keep_versions=args.keep_versions, pretend=args.pretend, verbose=args.verbose)
 
 
 if __name__ == "__main__":
